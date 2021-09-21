@@ -1,2 +1,8 @@
 gin : library untuk http framework (API)
 gorm : library db
+
+git :
+git init
+git status
+git add .
+git commit -m "pesan"
