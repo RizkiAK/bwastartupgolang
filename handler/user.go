@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bwastartupgolang/auth"
 	"bwastartupgolang/helper"
 	"bwastartupgolang/user"
 	"fmt"
@@ -10,11 +11,12 @@ import (
 )
 
 type userHandler struct {
-	userService user.Service
+	userService  user.Service
+	authSerevice auth.Service
 }
 
-func NewUserHandler(userService user.Service) *userHandler {
-	return &userHandler{userService}
+func NewUserHandler(userService user.Service, authSerevice auth.Service) *userHandler {
+	return &userHandler{userService, authSerevice}
 }
 
 func (h *userHandler) RegisterUser(c *gin.Context) {
@@ -41,7 +43,16 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	formatter := user.FormatUser(newUser, "tokentoken")
+	//
+	token, err := h.authSerevice.GenerateToken(newUser.ID)
+	if err != nil {
+		response := helper.ApiResponse("Register account failed", http.StatusUnprocessableEntity, "error", nil)
+		c.JSON(http.StatusUnprocessableEntity, response)
+		return
+	}
+	//
+
+	formatter := user.FormatUser(newUser, token)
 
 	response := helper.ApiResponse("Account has been registered", http.StatusOK, "success", formatter)
 
@@ -77,7 +88,14 @@ func (h *userHandler) Login(c *gin.Context) {
 		return
 	}
 
-	formatter := user.FormatUser(loggedinUser, "tokentoken")
+	token, err := h.authSerevice.GenerateToken(loggedinUser.ID)
+	if err != nil {
+		response := helper.ApiResponse("Login failed", http.StatusBadRequest, "error", nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	formatter := user.FormatUser(loggedinUser, token)
 
 	response := helper.ApiResponse("Succesfully loggedin", http.StatusOK, "success", formatter)
 
@@ -142,7 +160,10 @@ func (h *userHandler) UploadAvatar(c *gin.Context) {
 	}
 
 	//harusnya dari JWT, tapi sekarang manual
-	userID := 1
+	// userID := 1
+
+	currentUser := c.MustGet("currentUser").(user.User)
+	userID := currentUser.ID
 
 	//format lama
 	//images/namafile.png
