@@ -2,6 +2,7 @@ package main
 
 import (
 	"bwastartupgolang/auth"
+	"bwastartupgolang/campaign"
 	"bwastartupgolang/handler"
 	"bwastartupgolang/helper"
 	"bwastartupgolang/user"
@@ -24,20 +25,30 @@ func main() {
 	}
 
 	userRepository := user.NewRepository(db)
+	campaignRepository := campaign.NewRepository(db)
+
 	userService := user.NewService(userRepository)
+	campaignService := campaign.NewService(campaignRepository)
+
 	authSerevice := auth.NewService()
 
 	// userService.SaveAvatar(1, "images/1-profile.png")
 
 	userHandler := handler.NewUserHandler(userService, authSerevice)
+	campaignHandler := handler.NewCampaignHandler(campaignService)
 
 	router := gin.Default()
+	router.Static("/images", "./images")
 	api := router.Group("/api/v1")
 
 	api.POST("/users", userHandler.RegisterUser)
 	api.POST("/sessions", userHandler.Login)
 	api.POST("/email_checkers", userHandler.CheckEmailAvailability)
 	api.POST("/avatars", authMiddlerware(authSerevice, userService), userHandler.UploadAvatar)
+
+	api.GET("/campaigns", campaignHandler.GetCampaigns)
+	api.GET("/campaigns/:id", campaignHandler.GetCampaign)
+	api.POST("/campaigns/", authMiddlerware(authSerevice, userService), campaignHandler.CreateCampaign)
 
 	router.Run()
 
